@@ -5,15 +5,25 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import com.parse.Parse;
+import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseUser;
 import com.parse.ParseACL;
+import com.parse.SaveCallback;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import tgio.parselivequery.BaseQuery;
 import tgio.parselivequery.LiveQueryClient;
+import tgio.parselivequery.LiveQueryEvent;
+import tgio.parselivequery.Subscription;
+import tgio.parselivequery.interfaces.OnListener;
 
 public class LiveQueryExampleActivity extends AppCompatActivity {
 
@@ -31,16 +41,56 @@ public class LiveQueryExampleActivity extends AppCompatActivity {
                 .server("https://parseapi.back4app.com/").build()
         );
 
-        LiveQueryClient.init(, "cfEqijsSr9AS03FR76DJYM374KHH5GddQSQvIU7H", true);
+        LiveQueryClient.init("http://livequeryexample.back4app.io", "cfEqijsSr9AS03FR76DJYM374KHH5GddQSQvIU7H", true);
+        LiveQueryClient.connect();
+
+        // Subscription
+        final Subscription sub = new BaseQuery.Builder("Message")
+                .where("destination", "urgent")
+                .addField("content")
+                .build()
+                .subscribe();
+
+        sub.on(LiveQueryEvent.CREATE, new OnListener() {
+            @Override
+            public void on(JSONObject object) {
+                Log.e("CREATED", object.toString());
+            }
+        });
+
+        sub.on(LiveQueryEvent.UPDATE, new OnListener() {
+            @Override
+            public void on(JSONObject object) {
+                Log.e("UPDATED", object.toString());
+                try {
+                    Log.e("Content", ((JSONObject)object.get("object")).get("content").toString());
+                }
+                catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        sub.on(LiveQueryEvent.DELETE, new OnListener() {
+            @Override
+            public void on(JSONObject object) {
+                Log.e("DELETED", object.toString());
+            }
+        });
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
+                ParseObject poke = new ParseObject("Message");
+                poke.put("content", "poke");
+                poke.put("destination", "pokelist");
+                poke.saveInBackground(new SaveCallback() {
+                    @Override
+                    public void done(ParseException e) {
 
-
+                    }
+                });
             }
         });
     }
