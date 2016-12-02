@@ -9,6 +9,8 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
+
 import com.parse.Parse;
 import com.parse.ParseException;
 import com.parse.ParseObject;
@@ -32,6 +34,7 @@ public class LiveQueryExampleActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_query_example);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        EditText pokeText = (EditText) findViewById(R.id.pokeText);
         setSupportActionBar(toolbar);
 
         // Back4App's Parse setup
@@ -41,12 +44,12 @@ public class LiveQueryExampleActivity extends AppCompatActivity {
                 .server("https://parseapi.back4app.com/").build()
         );
 
-        LiveQueryClient.init("http://livequeryexample.back4app.io", "cfEqijsSr9AS03FR76DJYM374KHH5GddQSQvIU7H", true);
+        LiveQueryClient.init("wss://livequeryexample.back4app.io", "cfEqijsSr9AS03FR76DJYM374KHH5GddQSQvIU7H", true);
         LiveQueryClient.connect();
 
         // Subscription
         final Subscription sub = new BaseQuery.Builder("Message")
-                .where("destination", "urgent")
+                .where("destination", "pokelist")
                 .addField("content")
                 .build()
                 .subscribe();
@@ -54,41 +57,29 @@ public class LiveQueryExampleActivity extends AppCompatActivity {
         sub.on(LiveQueryEvent.CREATE, new OnListener() {
             @Override
             public void on(JSONObject object) {
-                Log.e("CREATED", object.toString());
-            }
-        });
-
-        sub.on(LiveQueryEvent.UPDATE, new OnListener() {
-            @Override
-            public void on(JSONObject object) {
-                Log.e("UPDATED", object.toString());
-                try {
-                    Log.e("Content", ((JSONObject)object.get("object")).get("content").toString());
-                }
-                catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        sub.on(LiveQueryEvent.DELETE, new OnListener() {
-            @Override
-            public void on(JSONObject object) {
-                Log.e("DELETED", object.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        EditText pokeText = (EditText) findViewById(R.id.pokeText);
+                        numPokes++;
+                        pokeText.setText("Poked " + numPokes + " times.");
+                    }
+                });
             }
         });
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
+            public void onClick(final View view) {
                 ParseObject poke = new ParseObject("Message");
                 poke.put("content", "poke");
                 poke.put("destination", "pokelist");
                 poke.saveInBackground(new SaveCallback() {
                     @Override
                     public void done(ParseException e) {
-
+                        Snackbar.make(view, "Poke has been sent!", Snackbar.LENGTH_LONG)
+                                .setAction("Action", null).show();
                     }
                 });
             }
@@ -115,4 +106,6 @@ public class LiveQueryExampleActivity extends AppCompatActivity {
         }
         return super.onOptionsItemSelected(item);
     }
+
+    int numPokes = 0;
 }
